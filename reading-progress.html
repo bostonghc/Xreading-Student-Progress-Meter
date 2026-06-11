@@ -244,5 +244,19 @@ function buildLadder(){
 document.getElementById("words").addEventListener("input", render);
 buildLadder();
 </script>
+
+<script>
+/* ===== Auto-fit: report our height to a parent page (e.g. the blog iframe) ===== */
+(function(){
+  function postHeight(){
+    var h = Math.ceil(document.documentElement.getBoundingClientRect().height);
+    parent.postMessage({ xreadingHeight: h }, "*");
+  }
+  window.addEventListener("load", postHeight);
+  window.addEventListener("resize", postHeight);
+  // the calculator result grows/shrinks the page as students type — track that too
+  if (window.ResizeObserver) new ResizeObserver(postHeight).observe(document.body);
+})();
+</script>
 </body>
 </html>
