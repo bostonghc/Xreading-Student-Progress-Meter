@@ -19,8 +19,24 @@ plus the local tools used to refresh its class snapshot.
    - open `admin.html`, drop in the CSV, then drop in `reading-progress.html`,
      and download the updated copy; **or**
    - run `python3 update-reading-progress.py "your-export.csv"`.
-3. Commit and push the updated `reading-progress.html`. GitHub Pages redeploys
-   automatically, and the iframe on the blog shows the new numbers.
+3. Commit and push the updated `reading-progress.html`:
+
+   ```bash
+   git add reading-progress.html
+   git commit -m "Update snapshot"
+   git push
+   ```
+
+**`git push` *is* the deploy — there is no separate hosting step.** GitHub Pages
+serves the site directly from this repo, so pushing republishes it automatically
+(~1 minute later). The live page and the blog iframe then both show the new
+numbers — nothing to upload anywhere, and nothing to change on the blog.
+
+- Confirm it went live: the repo's **Actions** tab shows a "pages build and
+  deployment" run — a green check means it's published. Or just reload the page.
+- If your own browser still shows old numbers, hard-refresh (Cmd-Shift-R); it's
+  just local cache.
+- Only ever commit `reading-progress.html`. The CSV stays out (see Privacy).
 
 ## Privacy
 
