@@ -200,28 +200,45 @@ function compute(objs){
     return !EXCLUDE_IF.some(function(x){return cls.indexOf(x)>=0;});
   });
   var dropped=objs.length-kept.length;
-  var reached={}; ts.forEach(function(t){reached[t.words]=0;});
-  var atZero=0, speeds=[];
+  function statsFor(rows){
+    var reached={}; ts.forEach(function(t){reached[t.words]=0;});
+    var atZero=0;
+    rows.forEach(function(r){
+      var w=num(r["Words Read"]);
+      if(w===0) atZero++;
+      ts.forEach(function(t){ if(w>=t.words) reached[t.words]++; });
+    });
+    return {total:rows.length, reached:reached, atZero:atZero};
+  }
+  // group by verbatim class label; cohort first, then classes A→Z
+  var byClass={};
   kept.forEach(function(r){
-    var w=num(r["Words Read"]), sp=flt(r["Read Speed (Word/Min)"]);
-    if(w===0) atZero++;
-    ts.forEach(function(t){ if(w>=t.words) reached[t.words]++; });
-    if(w>0 && sp>0) speeds.push(sp);
+    var c=(r["Classes"]||"").trim()||"(no class)";
+    (byClass[c]=byClass[c]||[]).push(r);
   });
+  var groups={"Whole cohort":statsFor(kept)};
+  Object.keys(byClass).sort().forEach(function(c){ groups[c]=statsFor(byClass[c]); });
+  // cohort read speed
+  var speeds=[];
+  kept.forEach(function(r){ var w=num(r["Words Read"]),sp=flt(r["Read Speed (Word/Min)"]); if(w>0&&sp>0) speeds.push(sp); });
   var wpm=speeds.length?Math.round(speeds.reduce(function(a,b){return a+b;},0)/speeds.length):95;
-  return {tiers:ts,total:kept.length,dropped:dropped,reached:reached,atZero:atZero,wpm:wpm,
-          week:weekNumber(),snapshot:snapLabel()};
+  return {tiers:ts, groups:groups, cohort:groups["Whole cohort"], dropped:dropped, wpm:wpm,
+          week:weekNumber(), snapshot:snapLabel()};
 }
 
 function block(s){
-  var pairs=s.tiers.map(function(t){return t.words+":"+s.reached[t.words];}).join(", ");
+  function groupLiteral(g){
+    var pairs=s.tiers.map(function(t){return t.words+":"+g.reached[t.words];}).join(",");
+    return "{ total:"+g.total+", reached:{"+pairs+"}, atZero:"+g.atZero+" }";
+  }
+  var lines=Object.keys(s.groups).map(function(k){
+    return "  "+JSON.stringify(k)+": "+groupLiteral(s.groups[k]);
+  }).join(",\n");
   return "/* GEN:START */\n"+
     'var SNAPSHOT = "'+s.snapshot+'";   // date of the export\n'+
     "var WEEK_NOW = "+s.week+";                // weeks elapsed\n"+
     "var READ_WPM = "+s.wpm+";               // cohort avg read speed (words/min)\n"+
-    "var TOTAL    = "+s.total+";              // students in the snapshot\n"+
-    "var REACHED  = { "+pairs+" };  // students at/above each threshold\n"+
-    "var AT_ZERO  = "+s.atZero+";              // haven't opened a book yet\n"+
+    "var GROUPS = {\n"+lines+"\n};\n"+
     "/* GEN:END */";
 }
 
@@ -238,11 +255,13 @@ function cfgBlock(s){
 }
 
 function show(s){
-  var rows=[["Snapshot",s.snapshot+" · week "+s.week],["Students",s.total]];
+  var co=s.cohort;
+  var rows=[["Snapshot",s.snapshot+" · week "+s.week],["Students",co.total]];
   s.tiers.forEach(function(t){
-    rows.push(["Reached "+t.pts+" pts (≥"+t.words.toLocaleString()+")",s.reached[t.words]+"  ("+Math.round(s.reached[t.words]/s.total*100)+"%)"]);
+    rows.push(["Reached "+t.pts+" pts (≥"+t.words.toLocaleString()+")",co.reached[t.words]+"  ("+Math.round(co.reached[t.words]/co.total*100)+"%)"]);
   });
-  rows.push(["Still on zero",s.atZero],["Cohort read speed",s.wpm+" wpm"]);
+  rows.push(["Still on zero",co.atZero],["Cohort read speed",s.wpm+" wpm"],
+            ["Classes detected",(Object.keys(s.groups).length-1)]);
   document.getElementById("summary").innerHTML=rows.map(function(r){
     return "<tr><td>"+r[0]+"</td><td>"+r[1]+"</td></tr>";}).join("");
   var wn=document.getElementById("warnote");

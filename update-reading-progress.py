@@ -15,7 +15,7 @@ What it does
 Edit nothing in the HTML by hand except the "SET ONCE" block (term start/end dates, tiers).
 """
 
-import argparse, csv, datetime as dt, re, sys
+import argparse, csv, datetime as dt, json, re, sys
 from pathlib import Path
 
 # ---- set these once to match the page + your term -------------------------
@@ -60,9 +60,23 @@ def main():
     kept = [r for r in rows if not any(x in (r.get("Classes") or "") for x in EXCLUDE_IF)]
     dropped = len(rows) - len(kept)
 
-    total   = len(kept)
-    reached = {t: sum(1 for r in kept if words(r) >= t) for t in THRESHOLDS}
-    at_zero = sum(1 for r in kept if words(r) == 0)
+    def stats_for(group):
+        return {
+            "total":   len(group),
+            "reached": {t: sum(1 for r in group if words(r) >= t) for t in THRESHOLDS},
+            "atZero":  sum(1 for r in group if words(r) == 0),
+        }
+
+    # cohort first, then each class (verbatim label) sorted alphabetically
+    by_class = {}
+    for r in kept:
+        cls = (r.get("Classes") or "").strip() or "(no class)"
+        by_class.setdefault(cls, []).append(r)
+    groups = {"Whole cohort": stats_for(kept)}
+    for cls in sorted(by_class):
+        groups[cls] = stats_for(by_class[cls])
+
+    cohort = groups["Whole cohort"]
 
     speeds  = [speed(r) for r in kept if words(r) > 0 and speed(r) > 0]
     wpm     = round(sum(speeds) / len(speeds)) if speeds else 95
@@ -71,15 +85,21 @@ def main():
     snapshot = args.date or today.strftime("%B %-d, %Y")
     week = args.week if args.week is not None else max(1, (today - TERM_START).days // 7 + 1)
 
-    reached_js = "{ " + ", ".join(f"{t}:{reached[t]}" for t in THRESHOLDS) + " }"
+    def group_literal(g):
+        pairs = ",".join(f"{t}:{g['reached'][t]}" for t in THRESHOLDS)
+        return f"{{ total:{g['total']}, reached:{{{pairs}}}, atZero:{g['atZero']} }}"
+
+    group_lines = ",\n".join(
+        f"  {json.dumps(k, ensure_ascii=False)}: {group_literal(v)}" for k, v in groups.items()
+    )
     block = (
         "/* GEN:START */\n"
         f'var SNAPSHOT = "{snapshot}";   // date of the export\n'
         f"var WEEK_NOW = {week};                // weeks elapsed\n"
         f"var READ_WPM = {wpm};               // cohort avg read speed (words/min)\n"
-        f"var TOTAL    = {total};              // students in the snapshot\n"
-        f"var REACHED  = {reached_js};  // students at/above each threshold\n"
-        f"var AT_ZERO  = {at_zero};              // haven't opened a book yet\n"
+        "var GROUPS = {\n"
+        f"{group_lines}\n"
+        "};\n"
         "/* GEN:END */"
     )
 
@@ -90,11 +110,12 @@ def main():
     html_path.write_text(new_html, encoding="utf-8")
 
     print(f"Updated {html_path}")
-    print(f"  snapshot {snapshot}  ·  week {week}  ·  {total} students"
+    print(f"  snapshot {snapshot}  ·  week {week}  ·  {cohort['total']} students"
           + (f"  ({dropped} test rows dropped)" if dropped else ""))
     for t in THRESHOLDS:
-        print(f"  >= {t:>6,}: {reached[t]:3d} students")
-    print(f"  on zero : {at_zero:3d}   ·   cohort read speed {wpm} wpm")
+        print(f"  >= {t:>6,}: {cohort['reached'][t]:3d} students")
+    print(f"  on zero : {cohort['atZero']:3d}   ·   cohort read speed {wpm} wpm")
+    print(f"  classes : {len(groups) - 1}  ({', '.join(k for k in groups if k != 'Whole cohort')})")
 
 
 if __name__ == "__main__":

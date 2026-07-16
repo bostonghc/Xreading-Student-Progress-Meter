@@ -77,6 +77,12 @@
   .rtrack{height:10px;background:var(--track);border-radius:6px;overflow:hidden}
   .rtrack > i{display:block;height:100%;border-radius:6px}
   .foot{font-size:12px;color:var(--muted);text-align:center;margin-top:8px}
+  /* ---- class selector ---- */
+  .pickrow{display:flex;align-items:center;gap:8px;margin:2px 0 14px;flex-wrap:wrap}
+  .pickrow label{font-size:13px;color:var(--muted)}
+  #classpick{font:inherit;font-size:14px;padding:8px 11px;border:1px solid var(--line);
+    border-radius:10px;background:var(--card);color:var(--ink);max-width:100%;cursor:pointer}
+  #classpick:focus{border-color:var(--accent);outline:none;box-shadow:0 0 0 3px rgba(0,113,227,.12)}
 </style>
 </head>
 <body>
@@ -98,6 +104,7 @@
   <!-- ============ COMPANION: dated tier ladder ============ -->
   <div class="card">
     <h2>How the class is climbing</h2>
+    <div class="pickrow" id="pickrow"><label for="classpick">Show</label><select id="classpick" aria-label="Choose a class"></select></div>
     <p class="asof" id="asof"></p>
     <div id="ladder"></div>
     <p class="foot" id="foot"></p>
@@ -122,9 +129,18 @@ var TIERS = [
 var SNAPSHOT = "July 16, 2026";   // date of the export
 var WEEK_NOW = 13;                // weeks elapsed
 var READ_WPM = 135;               // cohort avg read speed (words/min)
-var TOTAL    = 380;              // students in the snapshot
-var REACHED  = { 10000:281, 25000:206, 40000:103 };  // students at/above each threshold
-var AT_ZERO  = 40;              // haven't opened a book yet
+var GROUPS = {
+  "Whole cohort": { total:380, reached:{10000:284,25000:208,40000:110}, atZero:37 },
+  "ChiSo English 1A": { total:43, reached:{10000:22,25000:18,40000:13}, atZero:14 },
+  "ChiSo English 1B": { total:42, reached:{10000:33,25000:25,40000:17}, atZero:4 },
+  "CommHealth English 1": { total:45, reached:{10000:44,25000:36,40000:6}, atZero:1 },
+  "Econ English 1A": { total:29, reached:{10000:24,25000:14,40000:11}, atZero:2 },
+  "Econ English 1B": { total:29, reached:{10000:28,25000:25,40000:7}, atZero:1 },
+  "Econ English 1C": { total:27, reached:{10000:19,25000:13,40000:11}, atZero:3 },
+  "Econ English 1D": { total:28, reached:{10000:22,25000:18,40000:17}, atZero:1 },
+  "Junior College Spring 2026": { total:71, reached:{10000:29,25000:15,40000:12}, atZero:11 },
+  "Nursing English 1": { total:66, reached:{10000:63,25000:44,40000:16}, atZero:0 }
+};
 /* GEN:END */
 
 /* ---- term timing: derived live from the two dates in the config above ---- */
@@ -219,7 +235,9 @@ function render(){
   box.innerHTML = html;
 }
 
-function buildLadder(){
+function buildLadder(groupName){
+  var _keys = Object.keys(GROUPS), g = GROUPS[groupName] || GROUPS[_keys[0]];
+  var TOTAL = g.total, REACHED = g.reached, AT_ZERO = g.atZero;
   document.getElementById("asof").textContent =
     "As of "+SNAPSHOT+" · week "+WEEK_NOW+" of "+TOTAL_WEEKS+" · "+TOTAL+" students.";
   // rungs derive from TIERS (highest first) — green = students who earned that tier
@@ -249,7 +267,16 @@ function buildLadder(){
 }
 
 document.getElementById("words").addEventListener("input", render);
-buildLadder();
+
+/* class selector: default to the whole cohort (first key); hide if only one group */
+(function initClimb(){
+  var esc = function(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;"); };
+  var sel = document.getElementById("classpick"), keys = Object.keys(GROUPS);
+  sel.innerHTML = keys.map(function(k){ return '<option value="'+esc(k)+'">'+esc(k)+'</option>'; }).join("");
+  sel.addEventListener("change", function(){ buildLadder(sel.value); });
+  if (keys.length <= 1) document.getElementById("pickrow").style.display = "none";
+  buildLadder(keys[0]);
+})();
 </script>
 
 <script>
