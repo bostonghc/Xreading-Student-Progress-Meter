@@ -12,7 +12,7 @@ What it does
     and rewrites ONLY the block between /* GEN:START */ and /* GEN:END */ in the
     HTML file. Everything else in the page is left untouched.
 
-Edit nothing in the HTML by hand except the "SET ONCE" block (term length, tiers).
+Edit nothing in the HTML by hand except the "SET ONCE" block (term start/end dates, tiers).
 """
 
 import argparse, csv, datetime as dt, re, sys

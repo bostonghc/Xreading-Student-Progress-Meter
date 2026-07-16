@@ -106,9 +106,10 @@
 </div>
 
 <script>
-/* ===== Grading rule + term length — edit in admin.html, or here by hand ===== */
+/* ===== Grading rule + term dates — edit in admin.html, or here by hand ===== */
 /* CFG:START */
-var WEEK_END = 15;
+var TERM_START = "2026-04-20";   // first day of the term
+var TERM_END   = "2026-07-31";   // last day of the term (holiday weeks included)
 var TIERS = [
   {words:10000, pts:10},
   {words:25000, pts:20},
@@ -126,7 +127,13 @@ var REACHED  = { 10000:281, 25000:206, 40000:103 };  // students at/above each t
 var AT_ZERO  = 40;              // haven't opened a book yet
 /* GEN:END */
 
-var weeksLeft = Math.max(1, WEEK_END - WEEK_NOW);
+/* ---- term timing: derived live from the two dates in the config above ---- */
+var MS_WEEK = 7 * 864e5;
+function termDate(s){ var d = new Date(s + "T00:00:00"); return isNaN(d) ? null : d; }
+var TERM_S = termDate(TERM_START), TERM_E = termDate(TERM_END);
+var today = new Date(); today.setHours(0, 0, 0, 0);
+var TOTAL_WEEKS = (TERM_S && TERM_E) ? Math.max(1, Math.round((TERM_E - TERM_S) / MS_WEEK)) : 15;
+var weeksLeft   = TERM_E ? Math.max(1, Math.round((TERM_E - today) / MS_WEEK)) : 1;
 var fmt = function(n){ return n.toLocaleString("en-US"); };
 
 function points(w){
@@ -214,7 +221,7 @@ function render(){
 
 function buildLadder(){
   document.getElementById("asof").textContent =
-    "As of "+SNAPSHOT+" · week "+WEEK_NOW+" of "+WEEK_END+" · "+TOTAL+" students.";
+    "As of "+SNAPSHOT+" · week "+WEEK_NOW+" of "+TOTAL_WEEKS+" · "+TOTAL+" students.";
   // rungs derive from TIERS (highest first) — green = students who earned that tier
   var html = "";
   for (var i=TIERS.length-1;i>=0;i--){
