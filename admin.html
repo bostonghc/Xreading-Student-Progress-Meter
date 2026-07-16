@@ -216,13 +216,13 @@ function compute(objs){
     var c=(r["Classes"]||"").trim()||"(no class)";
     (byClass[c]=byClass[c]||[]).push(r);
   });
-  var groups={"Whole cohort":statsFor(kept)};
+  var groups={"All classes":statsFor(kept)};
   Object.keys(byClass).sort().forEach(function(c){ groups[c]=statsFor(byClass[c]); });
   // cohort read speed
   var speeds=[];
   kept.forEach(function(r){ var w=num(r["Words Read"]),sp=flt(r["Read Speed (Word/Min)"]); if(w>0&&sp>0) speeds.push(sp); });
   var wpm=speeds.length?Math.round(speeds.reduce(function(a,b){return a+b;},0)/speeds.length):95;
-  return {tiers:ts, groups:groups, cohort:groups["Whole cohort"], dropped:dropped, wpm:wpm,
+  return {tiers:ts, groups:groups, cohort:groups["All classes"], dropped:dropped, wpm:wpm,
           week:weekNumber(), snapshot:snapLabel()};
 }
 

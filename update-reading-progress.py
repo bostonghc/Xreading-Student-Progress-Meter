@@ -72,11 +72,11 @@ def main():
     for r in kept:
         cls = (r.get("Classes") or "").strip() or "(no class)"
         by_class.setdefault(cls, []).append(r)
-    groups = {"Whole cohort": stats_for(kept)}
+    groups = {"All classes": stats_for(kept)}
     for cls in sorted(by_class):
         groups[cls] = stats_for(by_class[cls])
 
-    cohort = groups["Whole cohort"]
+    cohort = groups["All classes"]
 
     speeds  = [speed(r) for r in kept if words(r) > 0 and speed(r) > 0]
     wpm     = round(sum(speeds) / len(speeds)) if speeds else 95
@@ -115,7 +115,7 @@ def main():
     for t in THRESHOLDS:
         print(f"  >= {t:>6,}: {cohort['reached'][t]:3d} students")
     print(f"  on zero : {cohort['atZero']:3d}   ·   cohort read speed {wpm} wpm")
-    print(f"  classes : {len(groups) - 1}  ({', '.join(k for k in groups if k != 'Whole cohort')})")
+    print(f"  classes : {len(groups) - 1}  ({', '.join(k for k in groups if k != 'All classes')})")
 
 
 if __name__ == "__main__":
