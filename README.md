@@ -22,6 +22,7 @@ plus the local tools used to refresh its class snapshot.
 3. Commit and push the updated `reading-progress.html`:
 
    ```bash
+   cd '/Users/Geoff/Library/CloudStorage/OneDrive-公立大学法人旭川市立大学/Xreading Progress Checker'
    git add reading-progress.html
    git commit -m "Update snapshot"
    git push
