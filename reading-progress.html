@@ -41,6 +41,15 @@
   .nudge{margin-top:14px;padding:14px 16px;border-radius:12px;background:#fff7e8;border:1px solid #ffe3b0;font-size:14px;line-height:1.45}
   .nudge.done{background:#eafbef;border-color:#bfeccb}
   .pace{font-weight:600}
+  .weekly-plan{margin-top:20px;border-top:1px solid var(--line)}
+  .plan-title{font-size:16px;font-weight:600;margin:16px 0 2px}
+  .plan-row{display:grid;grid-template-columns:86px 1fr;gap:12px;padding:12px 0;border-top:1px solid var(--line)}
+  .plan-title + .plan-row{border-top:none}
+  .plan-row.next .plan-target{color:var(--accent)}
+  .plan-target{font-size:14px;font-weight:600}
+  .plan-words{font-size:14px;font-weight:600;font-variant-numeric:tabular-nums}
+  .plan-time{font-size:13px;color:var(--muted)}
+  .plan-note{font-size:12px;color:var(--muted);margin:10px 0 0}
   .ticks{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:2px;font-variant-numeric:tabular-nums}
   /* ---- segmented climb track ---- */
   .climb{position:relative;margin:30px 0 8px;padding-top:30px}
@@ -107,7 +116,6 @@
     <div class="pickrow" id="pickrow"><label for="classpick">Show</label><select id="classpick" aria-label="Choose a class"></select></div>
     <p class="asof" id="asof"></p>
     <div id="ladder"></div>
-    <p class="foot" id="foot"></p>
   </div>
 
 </div>
@@ -165,6 +173,22 @@ function nextTier(w){
 function mins(w){ return Math.max(1, Math.round(w/READ_WPM)); }
 function kfmt(n){ return (n % 1000 === 0) ? (n/1000)+"k" : fmt(n); }
 
+function weeklyPlan(w, title){
+  var rows = "", nt = nextTier(w);
+  for (var i=0;i<TIERS.length;i++){
+    var t = TIERS[i];
+    if (t.words <= w) continue;
+    var perWeek = Math.ceil((t.words-w)/weeksLeft);
+    rows += '<div class="plan-row'+(nt && t.words===nt.words?' next':'')+'">'+
+      '<div class="plan-target">'+t.pts+' points</div>'+
+      '<div><div class="plan-words">'+fmt(perWeek)+' words/week</div>'+
+      '<div class="plan-time">about '+mins(perWeek)+' minutes of reading time/week</div></div></div>';
+  }
+  return '<section class="weekly-plan"><h3 class="plan-title">'+title+'</h3>'+rows+
+    '<p class="plan-note">Reading-time estimates use the class average reading speed: '+
+    fmt(READ_WPM)+' words per minute.</p></section>';
+}
+
 /* each tier has its own color; the top tier is always gold. */
 function tierColor(i,total){
   if (i===total-1) return "#e8a200";              // top tier — gold
@@ -200,7 +224,7 @@ function climbTrack(w){
 function render(){
   var raw = document.getElementById("words").value.replace(/[^0-9]/g,"");
   var box = document.getElementById("result");
-  if (raw === ""){ box.innerHTML = ""; return; }
+  if (raw === ""){ box.innerHTML = weeklyPlan(0, "Starting today"); return; }
   var w = parseInt(raw,10);
   var pts = points(w);
   var nt  = nextTier(w);
@@ -212,20 +236,9 @@ function render(){
 
   if (nt){
     var need = nt.words - w;
-    var perWeek = Math.ceil(need/weeksLeft);
-    var minWk = mins(perWeek);
     html += '<p class="nextline" style="margin-top:20px">You’ve read <b>'+fmt(w)+'</b> words. '+
             '<b>'+fmt(need)+'</b> more reaches <b>'+nt.pts+' points</b>.</p>';
-
-    if (w === 0){
-      html += '<div class="nudge">You’re at zero — and you’re not alone, but this is the move of the term. '+
-              'The first 10 points needs 10,000 words. With '+weeksLeft+' weeks left, that’s about '+
-              '<span class="pace">'+fmt(perWeek)+' words a week — roughly '+minWk+' minutes</span>. '+
-              'Less than one short reader. Open a book today and you’re off zero.</div>';
-    } else {
-      html += '<div class="nudge">Keep going: about <span class="pace">'+fmt(perWeek)+' words a week — roughly '+
-              minWk+' minutes</span> for the next '+weeksLeft+' weeks gets you to '+nt.pts+' points.</div>';
-    }
+    html += weeklyPlan(w, "Your weekly plan");
   } else {
     html += '<p class="nextline" style="margin-top:20px">You’ve read <b>'+fmt(w)+'</b> words.</p>';
     html += '<div class="nudge max">🏆 <b>'+maxPts+' / '+maxPts+' — reading grade: DEFEATED.</b> '+
@@ -260,14 +273,13 @@ function buildLadder(groupName){
   html += '<div class="rung">'+
       '<div class="badge"><b>0</b><span>so far</span></div>'+
       '<div class="rbar"><div class="label"><b>'+notYet+'</b> students haven’t reached the first '+first.pts+' points yet — '+
-      '<b>'+AT_ZERO+'</b> are still on zero</div>'+
+      '<b>'+AT_ZERO+'</b> have not begun reading yet</div>'+
       '<div class="rtrack"><i style="width:'+Math.round(notYet/TOTAL*100)+'%;background:var(--zero)"></i></div></div></div>';
   document.getElementById("ladder").innerHTML = html;
-  document.getElementById("foot").textContent =
-    "The first rung is the big one: "+fmt(Math.ceil(first.words/weeksLeft))+" words a week from now still gets you to "+first.pts+" points.";
 }
 
 document.getElementById("words").addEventListener("input", render);
+render();
 
 /* class selector: default to the whole cohort (first key); hide if only one group */
 (function initClimb(){
