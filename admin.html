@@ -66,7 +66,7 @@
     <div class="row">
       <div>
         <label for="termstart">First Monday of the term (week 1)</label>
-        <input type="date" id="termstart" value="2026-04-20">
+        <input type="date" id="termstart" value="2026-09-14">
         <p class="hint">Used to compute the week number.</p>
       </div>
       <div>
@@ -76,7 +76,7 @@
       </div>
       <div>
         <label for="termend">Last day of the term</label>
-        <input type="date" id="termend" value="2026-07-31">
+        <input type="date" id="termend" value="2027-01-31">
         <p class="hint">Holiday weeks included. Drives the weekly-pace countdown.</p>
       </div>
     </div>
@@ -180,6 +180,14 @@ function toObjects(rows){
 }
 function num(v){ var n=parseInt(String(v).replace(/[^0-9]/g,""),10); return isNaN(n)?0:n; }
 function flt(v){ var n=parseFloat(String(v).replace(/[^0-9.]/g,"")); return isNaN(n)?0:n; }
+function classLabel(value){
+  var labels=[], seen={};
+  String(value||"").split(",").forEach(function(part){
+    var label=part.trim().replace(/\s+/g," "), key=label.toLowerCase();
+    if(label && !seen[key]){ seen[key]=true; labels.push(label); }
+  });
+  return labels.join(", ")||"(no class)";
+}
 
 function weekNumber(){
   var s=new Date(document.getElementById("termstart").value+"T00:00:00");
@@ -210,10 +218,10 @@ function compute(objs){
     });
     return {total:rows.length, reached:reached, atZero:atZero};
   }
-  // group by verbatim class label; cohort first, then classes A→Z
+  // Group by cleaned class label; the export can repeat the same class name.
   var byClass={};
   kept.forEach(function(r){
-    var c=(r["Classes"]||"").trim()||"(no class)";
+    var c=classLabel(r["Classes"]);
     (byClass[c]=byClass[c]||[]).push(r);
   });
   var groups={"All classes":statsFor(kept)};

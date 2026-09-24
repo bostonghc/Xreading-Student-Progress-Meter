@@ -139,15 +139,15 @@ var WEEK_NOW = 2;                // weeks elapsed
 var READ_WPM = 97;               // cohort avg read speed (words/min)
 var GROUPS = {
   "All classes": { total:380, reached:{10000:1,25000:0,40000:0}, atZero:375 },
-  "ChiSo English 1A, ChiSo English 1A": { total:43, reached:{10000:0,25000:0,40000:0}, atZero:43 },
-  "ChiSo English 1B, ChiSo English 1B": { total:42, reached:{10000:0,25000:0,40000:0}, atZero:42 },
-  "CommHealth English 1, CommHealth English 1": { total:45, reached:{10000:0,25000:0,40000:0}, atZero:45 },
-  "Econ English 1A, Econ English 1A": { total:29, reached:{10000:1,25000:0,40000:0}, atZero:28 },
-  "Econ English 1B,  Econ English 1B": { total:29, reached:{10000:0,25000:0,40000:0}, atZero:29 },
-  "Econ English 1C, Econ English 1C": { total:27, reached:{10000:0,25000:0,40000:0}, atZero:27 },
-  "Econ English 1D, Econ English 1D": { total:28, reached:{10000:0,25000:0,40000:0}, atZero:27 },
+  "ChiSo English 1A": { total:43, reached:{10000:0,25000:0,40000:0}, atZero:43 },
+  "ChiSo English 1B": { total:42, reached:{10000:0,25000:0,40000:0}, atZero:42 },
+  "CommHealth English 1": { total:45, reached:{10000:0,25000:0,40000:0}, atZero:45 },
+  "Econ English 1A": { total:29, reached:{10000:1,25000:0,40000:0}, atZero:28 },
+  "Econ English 1B": { total:29, reached:{10000:0,25000:0,40000:0}, atZero:29 },
+  "Econ English 1C": { total:27, reached:{10000:0,25000:0,40000:0}, atZero:27 },
+  "Econ English 1D": { total:28, reached:{10000:0,25000:0,40000:0}, atZero:27 },
   "Junior College Spring 2026, Junior College 2026": { total:71, reached:{10000:0,25000:0,40000:0}, atZero:68 },
-  "Nursing English 1, Nursing English 1": { total:66, reached:{10000:0,25000:0,40000:0}, atZero:66 }
+  "Nursing English 1": { total:66, reached:{10000:0,25000:0,40000:0}, atZero:66 }
 };
 /* GEN:END */
 
@@ -271,8 +271,7 @@ function buildLadder(groupName){
   var notYet = TOTAL - (REACHED[first.words]||0);
   html += '<div class="rung">'+
       '<div class="badge"><b>0</b><span>so far</span></div>'+
-      '<div class="rbar"><div class="label"><b>'+notYet+'</b> students haven’t reached the first '+first.pts+' points yet — '+
-      '<b>'+AT_ZERO+'</b> have not begun reading yet</div>'+
+      '<div class="rbar"><div class="label"><b>'+AT_ZERO+' of '+TOTAL+'</b> students have not recorded any words yet</div>'+
       '<div class="rtrack"><i style="width:'+Math.round(notYet/TOTAL*100)+'%;background:var(--zero)"></i></div></div></div>';
   document.getElementById("ladder").innerHTML = html;
 }

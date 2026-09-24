@@ -21,7 +21,7 @@ from pathlib import Path
 # ---- set these once to match the page + your term -------------------------
 HTML_FILE  = "reading-progress.html"
 THRESHOLDS = [10000, 25000, 40000]   # must match the TIERS words in the HTML
-TERM_START = dt.date(2026, 4, 20)    # Monday of week 1 — used to auto-fill WEEK_NOW
+TERM_START = dt.date(2026, 9, 14)    # Monday of week 1 — used to auto-fill WEEK_NOW
 EXCLUDE_IF = ["Demo Class"]          # drop test/instructor rows whose Classes contains any of these
 # ---------------------------------------------------------------------------
 
@@ -37,6 +37,18 @@ def speed(row):
         return float(row["Read Speed (Word/Min)"].replace(",", "").strip())
     except (ValueError, KeyError, AttributeError):
         return 0.0
+
+
+def class_label(row):
+    """Collapse repeated class names from the Xreading export."""
+    labels, seen = [], set()
+    for part in (row.get("Classes") or "").split(","):
+        label = " ".join(part.split())
+        key = label.casefold()
+        if label and key not in seen:
+            seen.add(key)
+            labels.append(label)
+    return ", ".join(labels) or "(no class)"
 
 
 def main():
@@ -67,10 +79,10 @@ def main():
             "atZero":  sum(1 for r in group if words(r) == 0),
         }
 
-    # cohort first, then each class (verbatim label) sorted alphabetically
+    # Cohort first, then each normalized class label sorted alphabetically.
     by_class = {}
     for r in kept:
-        cls = (r.get("Classes") or "").strip() or "(no class)"
+        cls = class_label(r)
         by_class.setdefault(cls, []).append(r)
     groups = {"All classes": stats_for(kept)}
     for cls in sorted(by_class):
