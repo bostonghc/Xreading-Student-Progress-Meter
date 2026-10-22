@@ -39,8 +39,13 @@ def speed(row):
         return 0.0
 
 
-def class_label(row):
-    """Collapse repeated class names from the Xreading export."""
+def class_labels(row):
+    """De-duplicated, whitespace-normalized list of a student's class name(s).
+
+    The Xreading export sometimes repeats the same class (dedup handles that)
+    and sometimes lists genuinely different classes for a dual-enrolled
+    student -- callers decide what to do with more than one label.
+    """
     labels, seen = [], set()
     for part in (row.get("Classes") or "").split(","):
         label = " ".join(part.split())
@@ -48,7 +53,7 @@ def class_label(row):
         if label and key not in seen:
             seen.add(key)
             labels.append(label)
-    return ", ".join(labels) or "(no class)"
+    return labels
 
 
 def main():
@@ -80,10 +85,14 @@ def main():
         }
 
     # Cohort first, then each normalized class label sorted alphabetically.
+    # A student enrolled in more than one real class only counts in the "All
+    # classes" cohort below -- a per-class bucket for them would be a group
+    # of one, which exposes their individual count to anyone who selects it.
     by_class = {}
     for r in kept:
-        cls = class_label(r)
-        by_class.setdefault(cls, []).append(r)
+        labels = class_labels(r)
+        if len(labels) == 1:
+            by_class.setdefault(labels[0], []).append(r)
     groups = {"All classes": stats_for(kept)}
     for cls in sorted(by_class):
         groups[cls] = stats_for(by_class[cls])

@@ -180,13 +180,17 @@ function toObjects(rows){
 }
 function num(v){ var n=parseInt(String(v).replace(/[^0-9]/g,""),10); return isNaN(n)?0:n; }
 function flt(v){ var n=parseFloat(String(v).replace(/[^0-9.]/g,"")); return isNaN(n)?0:n; }
-function classLabel(value){
+/* De-duplicated, whitespace-normalized list of a student's class name(s).
+   The Xreading export sometimes repeats the same class (dedup handles that)
+   and sometimes lists genuinely different classes for a dual-enrolled
+   student — callers decide what to do with more than one label. */
+function classLabels(value){
   var labels=[], seen={};
   String(value||"").split(",").forEach(function(part){
     var label=part.trim().replace(/\s+/g," "), key=label.toLowerCase();
     if(label && !seen[key]){ seen[key]=true; labels.push(label); }
   });
-  return labels.join(", ")||"(no class)";
+  return labels;
 }
 
 function weekNumber(){
@@ -219,10 +223,13 @@ function compute(objs){
     return {total:rows.length, reached:reached, atZero:atZero};
   }
   // Group by cleaned class label; the export can repeat the same class name.
+  // A student enrolled in more than one real class only counts in the "All
+  // classes" cohort below — a per-class bucket for them would be a group of
+  // one, which exposes their individual count to anyone who selects it.
   var byClass={};
   kept.forEach(function(r){
-    var c=classLabel(r["Classes"]);
-    (byClass[c]=byClass[c]||[]).push(r);
+    var labels=classLabels(r["Classes"]);
+    if(labels.length===1){ var c=labels[0]; (byClass[c]=byClass[c]||[]).push(r); }
   });
   var groups={"All classes":statsFor(kept)};
   Object.keys(byClass).sort().forEach(function(c){ groups[c]=statsFor(byClass[c]); });
