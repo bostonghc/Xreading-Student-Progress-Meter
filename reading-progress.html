@@ -63,6 +63,15 @@
   .segticks{display:flex;gap:5px;margin-top:7px}
   .segticks span{flex:1;text-align:right;font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
   .segticks span.met{color:var(--good);font-weight:600}
+  /* ---- 30-point pace tick ---- */
+  .pacemark{position:absolute;top:25px;height:26px;width:2px;margin-left:-1px;border-radius:1px;
+    background:var(--ink);opacity:.5;pointer-events:none}
+  .paceline{font-size:14px;color:var(--muted);margin:14px 0 0}
+  .paceline b{color:var(--ink)}
+  .paceline .ahead{color:#248a3d}
+  .paceline .behind{color:#c46a00}
+  .paceswatch{display:inline-block;width:2px;height:13px;border-radius:1px;background:var(--ink);opacity:.5;
+    vertical-align:-2px;margin-right:6px}
   /* per-tier colors + gold celebration at the top tier */
   .rtrack > i.gold{background:linear-gradient(90deg,#e8a200,#ffd76a)}
   .climb.maxed .seg > i{background:linear-gradient(100deg,#e8a200,#fff0c4,#e8a200);
@@ -181,7 +190,7 @@ function weeklyPlan(w, title){
     rows += '<div class="plan-row'+(nt && t.words===nt.words?' next':'')+'">'+
       '<div class="plan-target">'+t.pts+' points</div>'+
       '<div><div class="plan-words">'+fmt(perWeek)+' words/week</div>'+
-      '<div class="plan-time">about '+mins(perWeek)+' minutes of reading time/week</div></div></div>';
+      '<div class="plan-time">about '+mins(perWeek)+' minute'+(mins(perWeek)===1?'':'s')+' of reading time/week</div></div></div>';
   }
   return '<section class="weekly-plan"><h3 class="plan-title">'+title+'</h3>'+rows+
     '<p class="plan-note">Reading-time estimates use the class average reading speed: '+
@@ -198,7 +207,37 @@ function tierColor(i,total){
 /* one continuous climb: each segment in its tier color, earned = full,
    next = partial, "you are here" marker on top. Cross the top tier and the
    whole track goes gold with a shine sweep. */
-function climbTrack(w){
+/* words read so far by a student reading steadily enough to hit the top tier
+   on the last day of term; null before the term starts */
+function paceWords(){
+  if (!TERM_S || !TERM_E) return null;
+  var f = (today - TERM_S) / (TERM_E - TERM_S);
+  if (f <= 0) return null;
+  return Math.round(TIERS[TIERS.length-1].words * Math.min(1, f));
+}
+
+/* x-position (%) of a word count on the segmented track, where every tier
+   gets an equal-width segment regardless of its word range */
+function trackPos(w){
+  var lo=0, units=0;
+  for (var i=0;i<TIERS.length;i++){
+    var hi=TIERS[i].words;
+    if (w>=hi) units+=1; else if (w>lo) units+=(w-lo)/(hi-lo);
+    lo=hi;
+  }
+  return Math.min(100, units/TIERS.length*100);
+}
+
+function paceLine(w, pace){
+  var diff = w - pace, top = TIERS[TIERS.length-1].pts, verdict;
+  if (Math.abs(diff) < 500)  verdict = 'You’re <b>right on pace</b>.';
+  else if (diff > 0)         verdict = 'You’re <b class="ahead">'+fmt(diff)+' words ahead</b>.';
+  else                       verdict = 'You’re <b class="behind">'+fmt(-diff)+' words behind</b>.';
+  return '<p class="paceline"><span class="paceswatch"></span>'+top+'-point pace today: '+
+         fmt(pace)+' words. '+verdict+'</p>';
+}
+
+function climbTrack(w, pace){
   var b=[0]; for (var i=0;i<TIERS.length;i++) b.push(TIERS[i].words);
   var nSeg=TIERS.length, units=0, segHTML="", tickHTML="";
   var maxed = w >= TIERS[nSeg-1].words;
@@ -216,6 +255,7 @@ function climbTrack(w){
   var markPos=Math.min(98, Math.max(2, overall));
   return '<div class="climb'+(maxed?" maxed":"")+'">'+
     '<div class="youmark" style="left:'+markPos+'%"><span class="ynum">'+fmt(w)+'</span><span class="ycar">▾</span></div>'+
+    (pace !== null && !maxed ? '<div class="pacemark" style="left:'+trackPos(pace)+'%" aria-hidden="true"></div>' : '')+
     '<div class="segs">'+segHTML+'</div>'+
     '<div class="segticks">'+tickHTML+'</div></div>';
 }
@@ -231,7 +271,9 @@ function render(){
   var maxPts = TIERS[TIERS.length-1].pts;
   var html = '<div class="points'+(pts===maxPts?' maxed':'')+'"><b>'+pts+'</b> '+
              '<span class="of">/ '+maxPts+' points right now</span></div>';
-  html += climbTrack(w);
+  var pace = paceWords();
+  html += climbTrack(w, pace);
+  if (nt && pace !== null) html += paceLine(w, pace);
 
   if (nt){
     var need = nt.words - w;
